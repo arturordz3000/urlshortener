@@ -1,10 +1,10 @@
-import LoadingSpinner from "./LoadingSpinner";
+import LoadingSpinner, { LOADING_SPINNER_TEST_ID } from "./LoadingSpinner";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 
-describe("UrlInput", () => {
+describe("LoadingSpinner", () => {
     it("renders loading spinner component", () => {
       render(<LoadingSpinner />);
-      expect(screen.getByTestId("LoadingSpinner")).toBeInTheDocument();
+      expect(screen.getByTestId(LOADING_SPINNER_TEST_ID)).toBeInTheDocument();
     });
 });

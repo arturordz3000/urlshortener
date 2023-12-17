@@ -1,4 +1,4 @@
-import UrlInput from "./UrlInput";
+import UrlInput, { URL_INPUT_TEST_ID } from "./UrlInput";
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { act } from "react-dom/test-utils";
@@ -6,8 +6,19 @@ import { act } from "react-dom/test-utils";
 describe("UrlInput", () => {
     it("renders url input component", () => {
       render(<UrlInput />);
-      expect(screen.getByTestId("UrlInput")).toBeInTheDocument();
+      expect(screen.getByTestId(URL_INPUT_TEST_ID)).toBeInTheDocument();
     });
+
+    it("should initialize input with undefined value", () => {
+      const onShortenButtonClicked = jest.fn();
+
+      render(<UrlInput onShortenButtonClicked={onShortenButtonClicked}/>);
+
+      const button = screen.getByRole('button');
+      button.click();
+
+      expect(onShortenButtonClicked).toHaveBeenCalledWith<[string | undefined]>(undefined);
+  });
 
     it("should call onShortenButton event when button clicked", () => {
         const onShortenButtonClicked = jest.fn();
