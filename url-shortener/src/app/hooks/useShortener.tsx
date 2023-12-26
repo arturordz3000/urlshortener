@@ -14,7 +14,9 @@ export interface UseShortenerOutput {
 export const useShortener = (): UseShortenerOutput => {
     const [url, setUrl] = useState<string | undefined>(undefined);
 
-    const { data, error, isLoading } = useSWR(url, getPostFetcher(url));
+    const { data, error, isLoading } = useSWR(url, getPostFetcher(url), {
+        shouldRetryOnError: false
+    });
 
     const shorten = useCallback((url: string | undefined) => {
         setUrl(url);
