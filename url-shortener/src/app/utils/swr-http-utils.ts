@@ -1,4 +1,5 @@
-const SHORTENER_SERVICE_ENDPOINT = 'https://tinyurl.com/'
+const SHORTENER_SERVICE_ENDPOINT = 'https://tinyurl.com/';
+const API_TOKEN = process.env.SHORTENER_API_TOKEN;
 
 export const doFetch = async (url: string, requestInit: RequestInit | undefined) => {
     return (await fetch(url, requestInit)).json();
@@ -15,6 +16,6 @@ export const  getPostFetcher = (body: any) => {
             body,
         }
 
-        return await doFetch(getShortenerServiceEndpoint(), request);
+        return await doFetch(`${getShortenerServiceEndpoint()}?api_token=${API_TOKEN}`, request);
     }
 }
