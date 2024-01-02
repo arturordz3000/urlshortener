@@ -1,4 +1,4 @@
-const SHORTENER_SERVICE_ENDPOINT = 'https://localhost:3001';
+const SHORTENER_SERVICE_ENDPOINT = 'http://localhost:3001';
 const API_TOKEN = process.env.NEXT_PUBLIC_SHORTENER_API_TOKEN;
 
 export const doFetch = async (url: string, requestInit: RequestInit | undefined) => {
@@ -11,7 +11,7 @@ export const getShortenerServiceEndpoint = () => {
 
 export const  getPostFetcher = (body: any) => {
     return async () => {
-        const url = `${getShortenerServiceEndpoint()}create`;
+        const url = `${getShortenerServiceEndpoint()}`;
         const request: RequestInit = {
             method: 'POST',
             body: JSON.stringify(body),

@@ -2,6 +2,7 @@
 
 import ErrorAlert from './components/ErrorAlert';
 import LoadingSpinner from './components/LoadingSpinner';
+import Successful from './components/Successful';
 import UrlInput from './components/UrlInput'
 import { useShortener } from './hooks/useShortener';
 
@@ -21,7 +22,7 @@ export default function Home() {
   } else if (isError) {
     content = <ErrorAlert />
   } else if (isData) {
-    content = <>Successful</>
+    content = <Successful link={data.short_url} />
   }
 
   return (
