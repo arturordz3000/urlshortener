@@ -1,17 +1,21 @@
-use actix_web::{get, post, http, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, post, http, web, App, HttpResponse, HttpServer, Responder, error, http::{header::ContentType, StatusCode}};
 use actix_cors::Cors;
 use actix_web::web::Json;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha256::digest;
 use substring::Substring;
+use derive_more::{Display, Error};
+use redis::{Client, Commands};
+use redis::RedisResult;
 
 pub const APPLICATION_JSON: &str = "application/json";
 pub const SHORT_URL_BASE: &str = "http://localhost/";
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Url {
     pub url: String,
+    pub url_hash: String,
     pub short_url: String,
     pub created_at: DateTime<Utc>,
 }
@@ -27,23 +31,95 @@ impl UrlRequest {
         let shorter_hash = hash.substring(0, 10);
         
         Url {
-            url: self.url.clone(),
+            url: self.url.trim().to_string(),
+            url_hash: shorter_hash.to_string(),
             created_at: Utc::now(),
             short_url: [SHORT_URL_BASE, shorter_hash].join("")
         }
     }
 }
 
-#[get("/")]
-async fn home() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
+#[derive(Debug, Display, Error)]
+enum UserError {
+    #[display(fmt = "Validation error on field: {}", field)]
+    ValidationError { field: String },
+    #[display(fmt = "An error occured during operation: {}", operation)]
+    InternalServerError { operation: String},
+    #[display(fmt = "Key does not exist: {}", key)]
+    KeyNotFound { key: String},
+}
+
+impl error::ResponseError for UserError {
+    fn error_response(&self) -> HttpResponse {
+        HttpResponse::build(self.status_code())
+            .insert_header(ContentType::json())
+            .body(self.to_string())
+    }
+    fn status_code(&self) -> StatusCode {
+        match *self {
+            UserError::ValidationError { .. } => StatusCode::BAD_REQUEST,
+            UserError::InternalServerError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            UserError::KeyNotFound { .. } => StatusCode::NOT_FOUND,
+        }
+    }
+}
+
+fn get_url(url_hash: &String) -> RedisResult<String> {
+    let client = Client::open("redis://127.0.0.1").unwrap();
+    let mut connection = client.get_connection().unwrap();
+
+    connection.get(url_hash)
+}
+
+fn save_url(url: &Url) -> RedisResult<bool> {
+    let client = Client::open("redis://127.0.0.1").unwrap();
+    let mut connection = client.get_connection().unwrap();
+
+    let url_json = serde_json::to_string(&url).unwrap();
+
+    connection.set(url.url_hash.as_str(), url_json)
+}
+
+#[get("/{url_hash}")]
+async fn get(path: web::Path<String>) -> impl Responder {
+    let url_hash = &path.into_inner();
+
+    match get_url(url_hash) {
+        Ok(result) => {
+            let url: Url = serde_json::from_str(&result).unwrap();
+
+            let response = HttpResponse::Created()
+            .content_type(APPLICATION_JSON)
+            .json(url);
+    
+            Ok(response)
+        },
+        Err(_error) => {
+            Err(UserError::KeyNotFound { key: url_hash.to_string() })
+        }
+    }
 }
 
 #[post("/")]
 async fn create(url_request: Json<UrlRequest>) -> impl Responder {
-    HttpResponse::Created()
-        .content_type(APPLICATION_JSON)
-        .json(url_request.to_url())
+    if url_request.url.is_empty() {
+        return Err(UserError::ValidationError { field: "url".to_string() });
+    }
+
+    let url = &url_request.to_url();
+
+    match save_url(url) {
+        Ok(_result) => {
+            let response = HttpResponse::Created()
+            .content_type(APPLICATION_JSON)
+            .json(url);
+    
+            Ok(response)
+        },
+        Err(error) => {
+            Err(UserError::InternalServerError { operation: error.detail().unwrap().to_string() } )
+        }
+    }
 }
 
 #[actix_web::main]
@@ -60,7 +136,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
-            .service(home)
+            .service(get)
             .service(create)
     })
     .bind(("127.0.0.1", 3001))?
