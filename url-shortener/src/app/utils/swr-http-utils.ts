@@ -9,18 +9,33 @@ export const getShortenerServiceEndpoint = () => {
     return SHORTENER_SERVICE_ENDPOINT;
 }
 
-export const  getPostFetcher = (body: any) => {
+export const getPostFetcher = (url: string | undefined) => {
     return async () => {
-        const url = `${getShortenerServiceEndpoint()}`;
+        const endpoint = `${getShortenerServiceEndpoint()}`;
         const request: RequestInit = {
             method: 'POST',
-            body: JSON.stringify(body),
+            body: JSON.stringify({ url }),
             headers: {
                 "Content-Type": "application/json",
                 'Authorization': 'Bearer ' + API_TOKEN, 
             },
         }
 
-        return await doFetch(url, request);
+        return await doFetch(endpoint, request);
+    }
+}
+
+export const getGetFetcher = (hash: string) => {
+    return async () => {
+        const endpoint = `${getShortenerServiceEndpoint()}/${hash}`;
+        const request: RequestInit = {
+            method: 'GET',
+            headers: {
+                "Content-Type": "application/json",
+                'Authorization': 'Bearer ' + API_TOKEN, 
+            },
+        }
+
+        return await doFetch(endpoint, request);
     }
 }

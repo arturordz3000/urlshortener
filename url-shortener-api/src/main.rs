@@ -1,7 +1,6 @@
 use actix_web::{get, post, http, web, App, HttpResponse, HttpServer, Responder, error, http::{header::ContentType, StatusCode}};
 use actix_cors::Cors;
 use actix_web::web::Json;
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha256::digest;
 use substring::Substring;
@@ -10,14 +9,13 @@ use redis::{Client, Commands};
 use redis::RedisResult;
 
 pub const APPLICATION_JSON: &str = "application/json";
-pub const SHORT_URL_BASE: &str = "http://localhost/";
+pub const SHORT_URL_BASE: &str = "http://localhost:3000/redirect";
 
 #[derive(Serialize, Deserialize)]
 pub struct Url {
     pub url: String,
     pub url_hash: String,
     pub short_url: String,
-    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Hash, Serialize, Deserialize)]
@@ -33,8 +31,7 @@ impl UrlRequest {
         Url {
             url: self.url.trim().to_string(),
             url_hash: shorter_hash.to_string(),
-            created_at: Utc::now(),
-            short_url: [SHORT_URL_BASE, shorter_hash].join("")
+            short_url: [SHORT_URL_BASE, shorter_hash].join("/")
         }
     }
 }
@@ -88,7 +85,7 @@ async fn get(path: web::Path<String>) -> impl Responder {
         Ok(result) => {
             let url: Url = serde_json::from_str(&result).unwrap();
 
-            let response = HttpResponse::Created()
+            let response = HttpResponse::Ok()
             .content_type(APPLICATION_JSON)
             .json(url);
     
